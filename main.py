@@ -1,5 +1,6 @@
 import os
 import logging
+import weave
 import argparse
 import numpy as np
 from dotenv import load_dotenv
@@ -62,6 +63,7 @@ class RAGPipeline:
         logger.info("Truncated input chunk to :%d words", len(input_chunk.split()))
         return input_chunk
 
+    @weave.op()
     def run(self, question, context):
         input_chunk = self.retrieve(context, question)
         return RAG_agent(
@@ -72,7 +74,6 @@ class RAGPipeline:
             query=question
         )
 
-
 class ChainOfAgentsPipeline:
     def __init__(self, client, model, task_requirement, max_chunk_size=5000):
         self.client = client
@@ -80,29 +81,32 @@ class ChainOfAgentsPipeline:
         self.task_requirement = task_requirement
         self.max_chunk_size = max_chunk_size
 
-    def run(self, query, long_text):
-        chunks = split_into_chunks_with_word(long_text, max_chunk_size=self.max_chunk_size)
+    @weave.op()
+    def run(self, query, context):
+        chunks = split_into_chunks_with_word(context, max_chunk_size=self.max_chunk_size)
         previous_cu = None
 
         for idx, chunk in enumerate(chunks):
             logger.info("Worker %d/%d 處理中...", idx + 1, len(chunks))
             logger.info("Words of chunk: %d", len(chunk.split()))
-            previous_cu = worker_agent(
+            response = worker_agent(
                 client=self.client,
                 model=self.model,
                 input_chunk=chunk,
                 previous_cu=previous_cu,
                 query=query
             )
+            previous_cu = response.choices[0].message.content.strip()
 
         logger.info("Manager 最終整合...")
-        return manager_agent(
+        response = manager_agent(
             client=self.client,
             model=self.model,
             task_requirement=self.task_requirement,
             previous_cu=previous_cu,
             query=query
         )
+        return response.choices[0].message.content.strip()
 
 
 class VanillaPipeline:
@@ -112,18 +116,20 @@ class VanillaPipeline:
         self.task_requirement = task_requirement
         self.max_chunk_size = max_chunk_size
 
-    def run(self, question, combined_context):
-        input_chunk = split_into_chunks_with_word(combined_context, max_chunk_size=self.max_chunk_size)
+    @weave.op()
+    def run(self, question, context):
+        input_chunk = split_into_chunks_with_word(context, max_chunk_size=self.max_chunk_size)
         input_chunk = input_chunk[0]  # Truncate to the first chunk
         logger.info("Truncated input chunk to :%d words", len(input_chunk.split()))
 
-        return vanilla_agent(
+        response =  vanilla_agent(
             client=self.client,
             model=self.model,
             input_chunk=input_chunk,
             task_requirement=self.task_requirement,
             query=question
         )
+        return response.choices[0].message.content.strip()
 
 def main():
     parser = argparse.ArgumentParser()
@@ -135,8 +141,15 @@ def main():
         required=True,
         help="Choose which method to run: rag, coa, or vanilla"
     )
+    parser.add_argument("-weave",
+                        "-w",
+                        type=str,
+                        help="Use weave for logging")
     args = parser.parse_args()
 
+    if args.weave:
+        weave.init(args.weave)
+        
     # 載入資料
     dataset = load_dataset('THUDM/LongBench', "hotpotqa", split='test')
     data_sample = dataset[3]

@@ -7,3 +7,4 @@ python-dotenv
 sentence-transformers
 tiktoken
 FlagEmbedding
+weave

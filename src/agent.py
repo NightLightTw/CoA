@@ -7,8 +7,10 @@ from src.prompt import (
 import logging
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
+import weave
 
 # WorkerAgent
+@weave.op()
 def worker_agent(client, model, input_chunk, previous_cu, query):
     prompt = COA_WORKER_PROMPT.format(
         Input_Chunk_ci=input_chunk,
@@ -19,16 +21,15 @@ def worker_agent(client, model, input_chunk, previous_cu, query):
     logger.info("Input words of worker: %d", len(prompt.split()))
     # logger.info("Worker prompt:\n%s", prompt)
     
-    response = client.chat.completions.create(
+    return client.chat.completions.create(
         model=model,
         messages=[{"role": "user", "content": prompt}],
         max_tokens=1024,
         temperature=0
     )
 
-    return response.choices[0].message.content.strip()
-
 # ManagerAgent
+@weave.op()
 def manager_agent(client, model, task_requirement, previous_cu, query):
     prompt = COA_MANAGER_PROMPT.format(
         Task_specific_requirement=task_requirement,
@@ -39,16 +40,15 @@ def manager_agent(client, model, task_requirement, previous_cu, query):
     logger.info("Input words of manager: %d", len(prompt.split()))
     logger.info("Manager prompt:\n%s", prompt)
     
-    response = client.chat.completions.create(
+    return client.chat.completions.create(
         model=model,
         messages=[{"role": "user", "content": prompt}],
         max_tokens=1024,
         temperature=0
     )
     
-    return response.choices[0].message.content.strip()
-
 # VanillaAgent
+@weave.op()
 def vanilla_agent(client, model, task_requirement, input_chunk, query):
     prompt = VANILLA_PROMPT.format(
         Source_Input_x_with_truncation_if_needed=input_chunk,
@@ -59,15 +59,15 @@ def vanilla_agent(client, model, task_requirement, input_chunk, query):
     logger.info("Input words of vanilla: %d", len(prompt.split()))
     logger.info("Input prompt:\n%s", prompt)
     
-    response = client.chat.completions.create(
+    return client.chat.completions.create(
         model=model,
         messages=[{"role": "user", "content": prompt}],
         max_tokens=1024,
         temperature=0
     )
 
-    return response.choices[0].message.content.strip()
-
+# RAGAgent
+@weave.op()
 def RAG_agent(client, model, task_requirement, input_chunk, query):
     prompt = RAG_PROMPT.format(
         Retrieved_Chunks_of_Source_Input_x=input_chunk,
