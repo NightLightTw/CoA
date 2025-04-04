@@ -1,0 +1,9 @@
+numpy
+pandas
+datasets
+tqdm
+openai
+python-dotenv
+sentence-transformers
+tiktoken
+FlagEmbedding
