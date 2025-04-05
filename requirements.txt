@@ -7,4 +7,7 @@ python-dotenv
 sentence-transformers
 tiktoken
 FlagEmbedding
+peft
 weave
+fastapi
+uvicorn
