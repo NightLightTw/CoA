@@ -12,7 +12,7 @@ from src.utils import split_into_chunks_with_word
 from src.agent import RAG_agent, worker_agent, manager_agent, vanilla_agent
 from src.prompt import HotpotQA_specific_requirement
 
-load_dotenv()
+load_dotenv(override=True)
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -30,7 +30,7 @@ class RAGPipeline:
         max_chunk_size=300,
         max_total_words=5000,
         client=None,
-        gen_model_name="meta-llama/llama-3.3-70b-instruct:Together",
+        gen_model_name="meta-llama/llama-3.3-70b-instruct:free",
         task_requirement=None
     ):
         self.retriever = FlagModel(model_name, use_fp16=True)
@@ -139,18 +139,22 @@ PIPELINE_METHOD = None
 def query_pipeline(request: QueryRequest):
     client = OpenAI(
         api_key=os.getenv("OPENROUTER_API_KEY"),
-        base_url="https://openrouter.ai/api/v1",
+        # base_url="https://openrouter.ai/api/v1",
+        base_url="http://localhost:8001/v1", # Local vllm server
         default_headers={
             "HTTP-Referer": "http://localhost",
             "X-Title": "Chain_of_agents_DEMO"
         }
     )
-
-    model_name = "meta-llama/llama-3.3-70b-instruct:Together"
+    # model_name = "meta-llama/llama-3.3-70b-instruct:free"
+    model_name = "meta-llama/Meta-Llama-3-8B-Instruct"
     task_requirement = HotpotQA_specific_requirement
 
     if PIPELINE_METHOD == "rag":
         pipeline = RAGPipeline(
+            model_name="BAAI/bge-large-en",
+            max_chunk_size=300,
+            max_total_words=4000,
             client=client,
             gen_model_name=model_name,
             task_requirement=task_requirement
@@ -159,10 +163,16 @@ def query_pipeline(request: QueryRequest):
         pipeline = ChainOfAgentsPipeline(
             client=client,
             model=model_name,
-            task_requirement=task_requirement
+            task_requirement=task_requirement,
+            max_chunk_size=4000
         )
     elif PIPELINE_METHOD == "vanilla":
-        pipeline = VanillaPipeline(client, model_name, task_requirement)
+        pipeline = VanillaPipeline(
+            client,
+            model_name,
+            task_requirement,
+            max_chunk_size=4000
+            )
     else:
         return {"error": "Invalid method"}
 

@@ -8,12 +8,12 @@ data_sample = dataset[3]
 question = data_sample["input"]
 context = data_sample["context"]
 
-data = {
+payload = {
     "question": f"{question}",
     "context": f"{context}"
 }
 
-response = requests.post(url, json=data)
+response = requests.post(url, json=payload)
 print("Status Code:", response.status_code)
 print("Response Text:", response.text)
 result = response.json()

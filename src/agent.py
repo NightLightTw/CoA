@@ -18,7 +18,7 @@ def worker_agent(client, model, input_chunk, previous_cu, query):
         Question_q=query
     )
     
-    logger.info("Input words of worker: %d", len(prompt.split()))
+    # logger.info("Input words of worker: %d", len(prompt.split()))
     # logger.info("Worker prompt:\n%s", prompt)
     
     return client.chat.completions.create(
@@ -37,8 +37,8 @@ def manager_agent(client, model, task_requirement, previous_cu, query):
         Question_q=query
     )
     
-    logger.info("Input words of manager: %d", len(prompt.split()))
-    logger.info("Manager prompt:\n%s", prompt)
+    # logger.info("Input words of manager: %d", len(prompt.split()))
+    # logger.info("Manager prompt:\n%s", prompt)
     
     return client.chat.completions.create(
         model=model,
@@ -56,8 +56,8 @@ def vanilla_agent(client, model, task_requirement, input_chunk, query):
         Question_q=query
     )
     
-    logger.info("Input words of vanilla: %d", len(prompt.split()))
-    logger.info("Input prompt:\n%s", prompt)
+    # logger.info("Input words of vanilla: %d", len(prompt.split()))
+    # logger.info("Input prompt:\n%s", prompt)
     
     return client.chat.completions.create(
         model=model,
@@ -75,14 +75,12 @@ def RAG_agent(client, model, task_requirement, input_chunk, query):
         Question_q=query
     )
     
-    print("Input words of RAG:", len(prompt.split()))
-    print(f"Input prompt:\n{prompt}")
+    # print("Input words of RAG:", len(prompt.split()))
+    # print(f"Input prompt:\n{prompt}")
     
-    response = client.chat.completions.create(
+    return client.chat.completions.create(
         model=model,
         messages=[{"role": "user", "content": prompt}],
         max_tokens=1024,
         temperature=0
     )
-
-    return response.choices[0].message.content.strip()

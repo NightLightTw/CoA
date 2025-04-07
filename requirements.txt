@@ -11,3 +11,7 @@ peft
 weave
 fastapi
 uvicorn
+jieba
+fuzzywuzzy
+rouge
+vllm
