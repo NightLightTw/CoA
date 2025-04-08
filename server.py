@@ -8,7 +8,7 @@ from FlagEmbedding import FlagModel
 from fastapi import FastAPI
 from pydantic import BaseModel
 
-from src.utils import split_into_chunks_with_word
+from src.utils import *
 from src.agent import RAG_agent, worker_agent, manager_agent, vanilla_agent
 from src.prompt import HotpotQA_specific_requirement
 
@@ -26,6 +26,7 @@ class QueryRequest(BaseModel):
 class RAGPipeline:
     def __init__(
         self,
+        tokenizer,
         model_name="BAAI/bge-large-en",
         max_chunk_size=300,
         max_total_words=5000,
@@ -38,6 +39,7 @@ class RAGPipeline:
         self.max_total_words = max_total_words
         self.client = client
         self.gen_model_name = gen_model_name
+        self.tokenizer = tokenizer
         self.task_requirement = task_requirement
 
     def embed_chunks(self, chunks):
@@ -61,10 +63,14 @@ class RAGPipeline:
         return relevant_chunks
 
     def retrieve(self, context, question):
-        chunks = split_into_chunks_with_word(context, max_chunk_size=self.max_chunk_size)
+        # chunks = split_into_chunks_with_word(context, max_chunk_size=self.max_chunk_size)
+        chunks = split_into_chunks_with_token(context, max_chunk_size=self.max_chunk_size, tokenizer=self.tokenizer, model=self.gen_model_name)
         embeddings = self.embed_chunks(chunks)
         relevant_chunks = self.retrieve_relevant_chunks(question, chunks, embeddings)
         input_chunk = " ".join(relevant_chunks)
+        
+        input_chunk = split_into_chunks_with_token(input_chunk, max_chunk_size=self.max_total_words, tokenizer=self.tokenizer, model=self.gen_model_name)
+        input_chunk = input_chunk[0] # Truncate to the first chunk
         logger.info("Truncated input chunk to :%d words", len(input_chunk.split()))
         return input_chunk
 
@@ -80,15 +86,18 @@ class RAGPipeline:
         )
 
 class ChainOfAgentsPipeline:
-    def __init__(self, client, model, task_requirement, max_chunk_size=5000):
+    def __init__(self, client, model, tokenizer, task_requirement, max_chunk_size=5000):
         self.client = client
         self.model = model
+        self.tokenizer = tokenizer
         self.task_requirement = task_requirement
         self.max_chunk_size = max_chunk_size
 
     @weave.op()
-    def run(self, query, context):
-        chunks = split_into_chunks_with_word(context, max_chunk_size=self.max_chunk_size)
+    def run(self, question, context):
+        # chunks = split_into_chunks_with_word(context, max_chunk_size=self.max_chunk_size)
+        chunks = split_into_chunks_with_token(context, max_chunk_size=self.max_chunk_size, tokenizer=self.tokenizer, model=self.model)
+
         previous_cu = None
 
         for idx, chunk in enumerate(chunks):
@@ -99,7 +108,7 @@ class ChainOfAgentsPipeline:
                 model=self.model,
                 input_chunk=chunk,
                 previous_cu=previous_cu,
-                query=query
+                query=question
             )
             previous_cu = response.choices[0].message.content.strip()
 
@@ -109,19 +118,22 @@ class ChainOfAgentsPipeline:
             model=self.model,
             task_requirement=self.task_requirement,
             previous_cu=previous_cu,
-            query=query
+            query=question
         )
 
 class VanillaPipeline:
-    def __init__(self, client, model, task_requirement, max_chunk_size=5000):
+    def __init__(self, client, model, tokenizer, task_requirement, max_chunk_size=5000):
         self.client = client
         self.model = model
+        self.tokenizer = tokenizer
         self.task_requirement = task_requirement
         self.max_chunk_size = max_chunk_size
 
     @weave.op()
     def run(self, question, context):
-        input_chunk = split_into_chunks_with_word(context, max_chunk_size=self.max_chunk_size)
+        # input_chunk = split_into_chunks_with_word(context, max_chunk_size=self.max_chunk_size)
+        input_chunk = split_into_chunks_with_token(context, max_chunk_size=self.max_chunk_size, tokenizer=self.tokenizer, model=self.model)
+
         input_chunk = input_chunk[0]  # Truncate to the first chunk
         logger.info("Truncated input chunk to :%d words", len(input_chunk.split()))
 
@@ -148,13 +160,15 @@ def query_pipeline(request: QueryRequest):
     )
     # model_name = "meta-llama/llama-3.3-70b-instruct:free"
     model_name = "meta-llama/Meta-Llama-3-8B-Instruct"
+    tokenizer = AutoTokenizer.from_pretrained(model_name)
     task_requirement = HotpotQA_specific_requirement
 
     if PIPELINE_METHOD == "rag":
         pipeline = RAGPipeline(
             model_name="BAAI/bge-large-en",
+            tokenizer=tokenizer,
             max_chunk_size=300,
-            max_total_words=4000,
+            max_total_words=6000,
             client=client,
             gen_model_name=model_name,
             task_requirement=task_requirement
@@ -163,15 +177,17 @@ def query_pipeline(request: QueryRequest):
         pipeline = ChainOfAgentsPipeline(
             client=client,
             model=model_name,
+            tokenizer=tokenizer,
             task_requirement=task_requirement,
-            max_chunk_size=4000
+            max_chunk_size=6000
         )
     elif PIPELINE_METHOD == "vanilla":
         pipeline = VanillaPipeline(
             client,
             model_name,
-            task_requirement,
-            max_chunk_size=4000
+            tokenizer=tokenizer,
+            task_requirement=task_requirement,
+            max_chunk_size=6000
             )
     else:
         return {"error": "Invalid method"}

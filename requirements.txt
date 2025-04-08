@@ -4,6 +4,7 @@ datasets
 tqdm
 openai
 python-dotenv
+transformers
 sentence-transformers
 tiktoken
 FlagEmbedding

@@ -10,12 +10,14 @@ if __name__ == "__main__":
     parser.add_argument("-project", "-p", type=str, default="hotpotqa-eval", help="WandB project name")
     parser.add_argument("-name", "-n", type=str, default="vanilla", help="WandB run name")
     parser.add_argument("-api", type=str, default="http://localhost:8000/query", help="API endpoint URL")
+    parser.add_argument("-dataset", "-d", type=str, default="hotpotqa", help="Specify the dataset to use")
     args = parser.parse_args()
 
     wandb.init(project=args.project, name=args.name)
     API_URL = args.api
-
-    dataset = load_dataset('THUDM/LongBench', "hotpotqa", split='test')
+    dataset_name = args.dataset
+    dataset = load_dataset('THUDM/LongBench', dataset_name, split='test')
+    # dataset = load_dataset('THUDM/LongBench', "hotpotqa", split='test')
     # dataset = dataset.select(range(5)) # Test few examples
     predictions = []
     ground_truths = []

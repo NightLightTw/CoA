@@ -1,10 +1,13 @@
 #!/bin/bash
 
 # 指定 pipeline 方法: rag, coa 或 vanilla
-PIPELINE_METHOD="vanilla"  
+PIPELINE_METHOD="rag"  
+
+# Dataset name
+DATASET_NAME="narrativeqa"  # 可選擇的 dataset: hotpotqa, narrativeqa, triviaqa...
 
 # 指定 Weave logging（可選，若不用則留空）
-WEAVE_PROJECT="hotpotqa-eval"
+WEAVE_PROJECT="narrativeqa-eval"
 
 API=http://localhost:8000/query
 
@@ -20,7 +23,7 @@ echo "Waiting for server to start..."
 sleep 5  # 可以調整等待時間，視 server 啟動速度而定
 
 # 執行 eval.py 進行評估
-python eval.py -project $WEAVE_PROJECT -name $PIPELINE_METHOD -api $API
+python eval.py -project $WEAVE_PROJECT -name $PIPELINE_METHOD -api $API -d $DATASET_NAME
 
 # 結束 server
 echo "Stopping server..."
