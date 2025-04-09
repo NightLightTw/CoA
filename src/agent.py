@@ -2,7 +2,8 @@ from src.prompt import (
     COA_WORKER_PROMPT,
     COA_MANAGER_PROMPT,
     VANILLA_PROMPT,
-    RAG_PROMPT
+    RAG_PROMPT,
+    DIRECT_PROMPT
 )
 import logging
 logger = logging.getLogger()
@@ -24,8 +25,8 @@ def worker_agent(client, model, input_chunk, previous_cu, query):
     return client.chat.completions.create(
         model=model,
         messages=[{"role": "user", "content": prompt}],
-        max_tokens=1024,
-        temperature=0
+        # max_tokens=1024,
+        # temperature=0 # unsupported in OpenAI o1-mini
     )
 
 # ManagerAgent
@@ -43,8 +44,9 @@ def manager_agent(client, model, task_requirement, previous_cu, query):
     return client.chat.completions.create(
         model=model,
         messages=[{"role": "user", "content": prompt}],
-        max_tokens=1024,
-        temperature=0
+        # max_tokens=1024,
+        # temperature=0 # unsupported in OpenAI o1-mini
+        # max_completion_tokens=1024, # for OpenAI o1-mini
     )
     
 # VanillaAgent
@@ -62,8 +64,8 @@ def vanilla_agent(client, model, task_requirement, input_chunk, query):
     return client.chat.completions.create(
         model=model,
         messages=[{"role": "user", "content": prompt}],
-        max_tokens=1024,
-        temperature=0
+        # max_tokens=1024,
+        # temperature=0 # unsupported in OpenAI o1-mini
     )
 
 # RAGAgent
@@ -81,6 +83,23 @@ def RAG_agent(client, model, task_requirement, input_chunk, query):
     return client.chat.completions.create(
         model=model,
         messages=[{"role": "user", "content": prompt}],
-        max_tokens=1024,
-        temperature=0
+        # max_tokens=1024,
+        # temperature=0 # unsupported in OpenAI o1-mini
+    )
+
+# DirectAgent
+@weave.op()
+def direct_agent(client, model, query):
+    prompt = DIRECT_PROMPT.format(
+        Question_q=query
+    )
+    
+    # logger.info("Input words of direct: %d", len(prompt.split()))
+    # logger.info("Input prompt:\n%s", prompt)
+    
+    return client.chat.completions.create(
+        model=model,
+        messages=[{"role": "user", "content": prompt}],
+        # max_tokens=1024,
+        # temperature=0, # unsupported in OpenAI o1-mini
     )

@@ -37,3 +37,9 @@ RAG_PROMPT = """
 Question: {Question_q}\n
 Answer:
 """
+
+DIRECT_PROMPT = """
+Only give me the answer and do not output any other words.\n
+Question: {Question_q}\n
+Answer:
+"""

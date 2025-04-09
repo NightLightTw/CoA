@@ -7,9 +7,11 @@ from openai import OpenAI
 from FlagEmbedding import FlagModel
 from fastapi import FastAPI
 from pydantic import BaseModel
+from transformers import AutoTokenizer
+import tiktoken
 
 from src.utils import *
-from src.agent import RAG_agent, worker_agent, manager_agent, vanilla_agent
+from src.agent import RAG_agent, worker_agent, manager_agent, vanilla_agent, direct_agent
 from src.prompt import HotpotQA_specific_requirement
 
 load_dotenv(override=True)
@@ -110,7 +112,9 @@ class ChainOfAgentsPipeline:
                 previous_cu=previous_cu,
                 query=question
             )
+            
             previous_cu = response.choices[0].message.content.strip()
+            logger.info("Worker full response: %s", response.model_dump_json(indent=2))
 
         logger.info("Manager 最終整合...")
         return manager_agent(
@@ -145,22 +149,38 @@ class VanillaPipeline:
             query=question
         )
 
+class DirectPipeline:
+    def __init__(self, client, model):
+        self.client = client
+        self.model = model
+        
+    @weave.op()
+    def run(self, question, context):
+        return direct_agent(
+            client=self.client,
+            model=self.model,
+            query=question
+        )
+
 PIPELINE_METHOD = None
 
 @app.post("/query")
 def query_pipeline(request: QueryRequest):
     client = OpenAI(
-        api_key=os.getenv("OPENROUTER_API_KEY"),
+        api_key=os.getenv("OPENAI_API_KEY"),
+        # api_key=os.getenv("OPENROUTER_API_KEY"),
         # base_url="https://openrouter.ai/api/v1",
-        base_url="http://localhost:8001/v1", # Local vllm server
-        default_headers={
-            "HTTP-Referer": "http://localhost",
-            "X-Title": "Chain_of_agents_DEMO"
-        }
+        # base_url="http://localhost:8001/v1", # Local vllm server
+        # default_headers={ # for OpenRouter
+        #     "HTTP-Referer": "http://localhost",
+        #     "X-Title": "Chain_of_agents_DEMO"
+        # }
     )
     # model_name = "meta-llama/llama-3.3-70b-instruct:free"
-    model_name = "meta-llama/Meta-Llama-3-8B-Instruct"
-    tokenizer = AutoTokenizer.from_pretrained(model_name)
+    # model_name = "meta-llama/Meta-Llama-3-8B-Instruct"
+    model_name = "o1-mini"
+    tokenizer = tiktoken.encoding_for_model(model_name)
+    # tokenizer = AutoTokenizer.from_pretrained(model_name)
     task_requirement = HotpotQA_specific_requirement
 
     if PIPELINE_METHOD == "rag":
@@ -188,7 +208,12 @@ def query_pipeline(request: QueryRequest):
             tokenizer=tokenizer,
             task_requirement=task_requirement,
             max_chunk_size=6000
-            )
+        )
+    elif PIPELINE_METHOD == "direct":
+        pipeline = DirectPipeline(
+            client,
+            model_name,
+        )
     else:
         return {"error": "Invalid method"}
 
@@ -200,7 +225,8 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument("-weave", "-w", type=str, help="Use weave for logging")
-    parser.add_argument("-method", "-m", type=str, choices=["rag", "coa", "vanilla"], required=True, help="Specify the pipeline method")
+    parser.add_argument("-method", "-m", type=str, choices=["rag", "coa", "vanilla", "direct"], required=True, help="Specify the pipeline method")
+    parser.add_argument("-port", "-p", type=int, default=8000, help="Port number for the server")
     args = parser.parse_args()
 
     PIPELINE_METHOD = args.method
@@ -208,4 +234,4 @@ if __name__ == "__main__":
     if args.weave:
         weave.init(args.weave)
 
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=args.port)

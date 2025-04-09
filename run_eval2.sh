@@ -4,12 +4,12 @@
 PIPELINE_METHOD="rag"  
 
 # Dataset name
-DATASET_NAME="hotpotqa"  # 可選擇的 dataset: hotpotqa, narrativeqa, triviaqa...
+DATASET_NAME="narrativeqa"  # 可選擇的 dataset: hotpotqa, narrativeqa, triviaqa...
 
 # 指定 Weave logging（可選，若不用則留空）
-WEAVE_PROJECT="hotpotqa-o1-mini"
+WEAVE_PROJECT="narrativeqa-o1-mini"
 
-SERVER_PORT=8000
+SERVER_PORT=8002
 
 API=http://localhost:$SERVER_PORT/query
 
