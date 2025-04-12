@@ -53,18 +53,6 @@ def split_into_chunks_with_word(text: str, max_chunk_size: int, model: str = "me
     logger.info(f"Split text into {len(chunks)} chunks")
     return chunks
 
-def split_into_chunks_with_token(text: str, max_chunk_size: int, tokenizer, model: str = "meta-llama/Meta-Llama-3-8B") -> List[str]:
-    """
-    Split text into chunks based on token count using a tokenizer.
-    
-    Args:
-        text: The input text to split
-        max_chunk_size: Maximum number of tokens per chunk
-        model: Model name to use for tokenization
-        
-    Returns:
-        List[str]: List of text chunks
-    """
 
 def split_into_chunks_with_token(text: str, max_chunk_size: int, tokenizer, model: str = "gpt-4o-mini") -> List[str]:
     """

@@ -25,8 +25,8 @@ def worker_agent(client, model, input_chunk, previous_cu, query):
     return client.chat.completions.create(
         model=model,
         messages=[{"role": "user", "content": prompt}],
-        # max_tokens=1024,
-        # temperature=0 # unsupported in OpenAI o1-mini
+        max_tokens=1024, # unsupported in OpenAI o1-mini
+        temperature=0 # unsupported in OpenAI o1-mini
     )
 
 # ManagerAgent
@@ -44,9 +44,8 @@ def manager_agent(client, model, task_requirement, previous_cu, query):
     return client.chat.completions.create(
         model=model,
         messages=[{"role": "user", "content": prompt}],
-        # max_tokens=1024,
-        # temperature=0 # unsupported in OpenAI o1-mini
-        # max_completion_tokens=1024, # for OpenAI o1-mini
+        max_tokens=1024, # unsupported in OpenAI o1-mini
+        temperature=0 # unsupported in OpenAI o1-mini
     )
     
 # VanillaAgent
@@ -64,8 +63,8 @@ def vanilla_agent(client, model, task_requirement, input_chunk, query):
     return client.chat.completions.create(
         model=model,
         messages=[{"role": "user", "content": prompt}],
-        # max_tokens=1024,
-        # temperature=0 # unsupported in OpenAI o1-mini
+        max_tokens=1024, # unsupported in OpenAI o1-mini
+        temperature=0 # unsupported in OpenAI o1-mini
     )
 
 # RAGAgent
@@ -83,8 +82,8 @@ def RAG_agent(client, model, task_requirement, input_chunk, query):
     return client.chat.completions.create(
         model=model,
         messages=[{"role": "user", "content": prompt}],
-        # max_tokens=1024,
-        # temperature=0 # unsupported in OpenAI o1-mini
+        max_tokens=1024, # unsupported in OpenAI o1-mini
+        temperature=0 # unsupported in OpenAI o1-mini
     )
 
 # DirectAgent
@@ -100,6 +99,6 @@ def direct_agent(client, model, query):
     return client.chat.completions.create(
         model=model,
         messages=[{"role": "user", "content": prompt}],
-        # max_tokens=1024,
-        # temperature=0, # unsupported in OpenAI o1-mini
+        max_tokens=1024, # unsupported in OpenAI o1-mini
+        temperature=0 # unsupported in OpenAI o1-mini
     )

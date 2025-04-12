@@ -73,7 +73,7 @@ class RAGPipeline:
         
         input_chunk = split_into_chunks_with_token(input_chunk, max_chunk_size=self.max_total_words, tokenizer=self.tokenizer, model=self.gen_model_name)
         input_chunk = input_chunk[0] # Truncate to the first chunk
-        logger.info("Truncated input chunk to :%d words", len(input_chunk.split()))
+        logger.info("Truncated input chunk to :%d tokens", len(input_chunk.split()))
         return input_chunk
 
     @weave.op()
@@ -169,8 +169,8 @@ def query_pipeline(request: QueryRequest):
     client = OpenAI(
         api_key=os.getenv("OPENAI_API_KEY"),
         # api_key=os.getenv("OPENROUTER_API_KEY"),
-        # base_url="https://openrouter.ai/api/v1",
         # base_url="http://localhost:8001/v1", # Local vllm server
+        # base_url="https://openrouter.ai/api/v1",
         # default_headers={ # for OpenRouter
         #     "HTTP-Referer": "http://localhost",
         #     "X-Title": "Chain_of_agents_DEMO"
@@ -178,7 +178,7 @@ def query_pipeline(request: QueryRequest):
     )
     # model_name = "meta-llama/llama-3.3-70b-instruct:free"
     # model_name = "meta-llama/Meta-Llama-3-8B-Instruct"
-    model_name = "o1-mini"
+    model_name = args.llm
     tokenizer = tiktoken.encoding_for_model(model_name)
     # tokenizer = AutoTokenizer.from_pretrained(model_name)
     task_requirement = HotpotQA_specific_requirement
@@ -214,6 +214,14 @@ def query_pipeline(request: QueryRequest):
             client,
             model_name,
         )
+    elif PIPELINE_METHOD == "long":
+        pipeline = VanillaPipeline(
+            client,
+            model_name,
+            tokenizer=tokenizer,
+            task_requirement=task_requirement,
+            max_chunk_size=126000
+        )
     else:
         return {"error": "Invalid method"}
 
@@ -225,8 +233,9 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument("-weave", "-w", type=str, help="Use weave for logging")
-    parser.add_argument("-method", "-m", type=str, choices=["rag", "coa", "vanilla", "direct"], required=True, help="Specify the pipeline method")
+    parser.add_argument("-method", "-m", type=str, choices=["rag", "coa", "vanilla", "direct","long"], required=True, help="Specify the pipeline method")
     parser.add_argument("-port", "-p", type=int, default=8000, help="Port number for the server")
+    parser.add_argument("-llm", "-l", type=str, default="gpt-4o-mini", help="LLM model name")
     args = parser.parse_args()
 
     PIPELINE_METHOD = args.method
