@@ -2,6 +2,7 @@ import os
 import logging
 import weave
 import numpy as np
+import torch
 from dotenv import load_dotenv
 from openai import OpenAI
 from FlagEmbedding import FlagModel
@@ -36,7 +37,9 @@ class RAGPipeline:
         gen_model_name="meta-llama/llama-3.3-70b-instruct:free",
         task_requirement=None
     ):
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.retriever = FlagModel(model_name, use_fp16=True)
+        self.retriever.model = self.retriever.model.to(device) # Move model to GPU if available
         self.max_chunk_size = max_chunk_size
         self.max_total_words = max_total_words
         self.client = client
@@ -169,18 +172,19 @@ def query_pipeline(request: QueryRequest):
     client = OpenAI(
         api_key=os.getenv("OPENAI_API_KEY"),
         # api_key=os.getenv("OPENROUTER_API_KEY"),
-        # base_url="http://localhost:8001/v1", # Local vllm server
+        # base_url="http://10.8.4.128:8001/v1", # Local vllm server
         # base_url="https://openrouter.ai/api/v1",
         # default_headers={ # for OpenRouter
         #     "HTTP-Referer": "http://localhost",
         #     "X-Title": "Chain_of_agents_DEMO"
         # }
     )
-    # model_name = "meta-llama/llama-3.3-70b-instruct:free"
-    # model_name = "meta-llama/Meta-Llama-3-8B-Instruct"
     model_name = args.llm
-    tokenizer = tiktoken.encoding_for_model(model_name)
+    # tokenizer = tiktoken.encoding_for_model(model_name)
+    tokenizer = tiktoken.get_encoding("cl100k_base")
     # tokenizer = AutoTokenizer.from_pretrained(model_name)
+    # tokenizer = AutoTokenizer.from_pretrained(args.tokenizer_name)
+
     task_requirement = HotpotQA_specific_requirement
 
     if PIPELINE_METHOD == "rag":
@@ -236,6 +240,7 @@ if __name__ == "__main__":
     parser.add_argument("-method", "-m", type=str, choices=["rag", "coa", "vanilla", "direct","long"], required=True, help="Specify the pipeline method")
     parser.add_argument("-port", "-p", type=int, default=8000, help="Port number for the server")
     parser.add_argument("-llm", "-l", type=str, default="gpt-4o-mini", help="LLM model name")
+    parser.add_argument("-tokenizer_name", "-t", type=str, default="meta-llama/llama-3.3-70b-instruct", help="Tokenizer model name")
     args = parser.parse_args()
 
     PIPELINE_METHOD = args.method

@@ -53,7 +53,7 @@ def split_into_chunks_with_word(text: str, max_chunk_size: int, model: str = "me
     logger.info(f"Split text into {len(chunks)} chunks")
     return chunks
 
-
+# TikToken
 def split_into_chunks_with_token(text: str, max_chunk_size: int, tokenizer, model: str = "gpt-4o-mini") -> List[str]:
     """
     用 tiktoken 將文字依 token 數估算切成多個文字 chunk（無 decode）
@@ -114,60 +114,61 @@ def split_into_chunks_with_token(text: str, max_chunk_size: int, tokenizer, mode
     print(f"Split text into {len(chunks)} chunks using tiktoken")
     return chunks
 
-def split_into_chunks_with_token_AutoTokenizer(text: str, max_chunk_size: int, tokenizer, model: str = "meta-llama/Meta-Llama-3-8B") -> List[str]:
-    """
-    Split text into chunks based on token count using a tokenizer.
+# AutoTokenizer
+# def split_into_chunks_with_token(text: str, max_chunk_size: int, tokenizer, model: str = "meta-llama/Meta-Llama-3-8B") -> List[str]:
+#     """
+#     Split text into chunks based on token count using a tokenizer.
     
-    Args:
-        text: The input text to split
-        max_chunk_size: Maximum number of tokens per chunk
-        model: Model name to use for tokenization
+#     Args:
+#         text: The input text to split
+#         max_chunk_size: Maximum number of tokens per chunk
+#         model: Model name to use for tokenization
         
-    Returns:
-        List[str]: List of text chunks
-    """
+#     Returns:
+#         List[str]: List of text chunks
+#     """
 
-    paragraphs = text.split('\n\n')
-    chunks = []
-    current_chunk = ""
-    current_chunk_tokens = 0
+#     paragraphs = text.split('\n\n')
+#     chunks = []
+#     current_chunk = ""
+#     current_chunk_tokens = 0
     
-    for paragraph in paragraphs:
-        if not paragraph.strip():
-            continue
+#     for paragraph in paragraphs:
+#         if not paragraph.strip():
+#             continue
 
-        paragraph_tokens = tokenizer(paragraph).input_ids
-        paragraph_token_count = len(paragraph_tokens)
+#         paragraph_tokens = tokenizer(paragraph).input_ids
+#         paragraph_token_count = len(paragraph_tokens)
 
-        if current_chunk_tokens + paragraph_token_count > max_chunk_size:
-            if current_chunk:
-                chunks.append(current_chunk.strip())
-                current_chunk = ""
-                current_chunk_tokens = 0
+#         if current_chunk_tokens + paragraph_token_count > max_chunk_size:
+#             if current_chunk:
+#                 chunks.append(current_chunk.strip())
+#                 current_chunk = ""
+#                 current_chunk_tokens = 0
                 
-            # Handle paragraphs larger than chunk_size
-            while paragraph_token_count > max_chunk_size:
-                partial_tokens = paragraph_tokens[:max_chunk_size]
-                partial_text = tokenizer.decode(partial_tokens, skip_special_tokens=True).strip()
-                chunks.append(partial_text)
+#             # Handle paragraphs larger than chunk_size
+#             while paragraph_token_count > max_chunk_size:
+#                 partial_tokens = paragraph_tokens[:max_chunk_size]
+#                 partial_text = tokenizer.decode(partial_tokens, skip_special_tokens=True).strip()
+#                 chunks.append(partial_text)
 
-                paragraph_tokens = paragraph_tokens[max_chunk_size:]
-                paragraph_token_count = len(paragraph_tokens)
-                paragraph = tokenizer.decode(paragraph_tokens, skip_special_tokens=True).strip()
+#                 paragraph_tokens = paragraph_tokens[max_chunk_size:]
+#                 paragraph_token_count = len(paragraph_tokens)
+#                 paragraph = tokenizer.decode(paragraph_tokens, skip_special_tokens=True).strip()
 
-            current_chunk = paragraph
-            current_chunk_tokens = paragraph_token_count
-        else:
-            if current_chunk:
-                current_chunk += "\n\n"
-            current_chunk += paragraph
-            current_chunk_tokens = len(tokenizer(current_chunk).input_ids)
+#             current_chunk = paragraph
+#             current_chunk_tokens = paragraph_token_count
+#         else:
+#             if current_chunk:
+#                 current_chunk += "\n\n"
+#             current_chunk += paragraph
+#             current_chunk_tokens = len(tokenizer(current_chunk).input_ids)
 
-    if current_chunk:
-        chunks.append(current_chunk.strip())
+#     if current_chunk:
+#         chunks.append(current_chunk.strip())
 
-    logger.info(f"Split text into {len(chunks)} chunks using tokenization")
-    return chunks
+#     logger.info(f"Split text into {len(chunks)} chunks using tokenization")
+#     return chunks
 
 def count_words(text: str, model: str = "meta-llama/Meta-Llama-3-8B") -> int:
     """
