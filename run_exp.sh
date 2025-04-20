@@ -15,7 +15,7 @@ MODEL_NAME_CLEAN="${LLM_MODEL##*/}"
 MODEL_NAME_CLEAN="${MODEL_NAME_CLEAN//./-}"
 
 # 保留原本的命名規則
-WEAVE_PROJECT_RAW="${DATASET_NAME}-${MODEL_NAME_CLEAN}"
+WEAVE_PROJECT_RAW="new-${DATASET_NAME}-${MODEL_NAME_CLEAN}"
 WEAVE_PROJECT="${WEAVE_PROJECT_RAW,,}" # lowercase
 
 SERVER_PORT=8003
@@ -31,7 +31,7 @@ do
     echo "============================="
 
     # 啟動 server.py 並寫入 logs
-    python server.py -m $PIPELINE_METHOD -w $WEAVE_PROJECT -p $SERVER_PORT -l $LLM_MODEL -t $TOKENIZER > logs/server_${SERVER_PORT}_${PIPELINE_METHOD}.log 2>&1 &
+    python server2.py -m $PIPELINE_METHOD -w $WEAVE_PROJECT -p $SERVER_PORT -l $LLM_MODEL -t $TOKENIZER > logs/server_${SERVER_PORT}_${PIPELINE_METHOD}.log 2>&1 &
 
     # 等待 server 啟動
     echo "Waiting for server to start..."

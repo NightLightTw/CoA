@@ -7,15 +7,15 @@ PIPELINE_METHODS=("vanilla" "rag" "direct" "long" "coa")
 DATASET_NAME="narrativeqa"
 
 # LLM/tokenizer model
-LLM_MODEL="gpt-4.1"
-TOKENIZER="gpt-4.1"
+LLM_MODEL="google/gemma-3-27b-it"
+TOKENIZER="google/gemma-3-27b-it"
 
 # 取出模型名稱部分，自動清理掉 prefix 與特殊字元
 MODEL_NAME_CLEAN="${LLM_MODEL##*/}"
 MODEL_NAME_CLEAN="${MODEL_NAME_CLEAN//./-}"
 
 # 保留原本的命名規則
-WEAVE_PROJECT_RAW="${DATASET_NAME}-${MODEL_NAME_CLEAN}"
+WEAVE_PROJECT_RAW="new-${DATASET_NAME}-${MODEL_NAME_CLEAN}"
 WEAVE_PROJECT="${WEAVE_PROJECT_RAW,,}" # lowercase
 
 SERVER_PORT=8004

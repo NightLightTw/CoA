@@ -163,10 +163,13 @@ def rouge_zh_score(predictions: list[str], references: list[str], **kwargs) -> f
 
 
 def f1_score(predictions: list[str], references: list[str], **kwargs):
-    try:
-        prediction, ground_truth = predictions[0], references[0]
-    except:
-        return 0.0
+    # try:
+    #     prediction, ground_truth = predictions[0], references[0]
+    # except:
+    #     return 0.0
+    prediction, ground_truth = predictions, references
+    # print("prediction:", prediction)
+    # print("ground_truth:", ground_truth)
     common = Counter(prediction) & Counter(ground_truth)
     num_same = sum(common.values())
     if num_same == 0:
@@ -181,7 +184,8 @@ def qa_f1_score(predictions: list[str], references: list[str], **kwargs) -> floa
     prediction, ground_truth = predictions[0], references[0]
     normalized_prediction = normalize_answer(prediction)
     normalized_ground_truth = normalize_answer(ground_truth)
-
+    # print("normalized_prediction:", normalized_prediction)
+    # print("normalized_ground_truth:", normalized_ground_truth)
     prediction_tokens = normalized_prediction.split()
     ground_truth_tokens = normalized_ground_truth.split()
     try:

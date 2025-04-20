@@ -1,20 +1,20 @@
 #!/bin/bash
 
-# 指定 pipeline 方法: vanilla, rag, direct, long, coa
-PIPELINE_METHOD="rag"  
+# 指定 pipeline 方法: vanilla, rag, direct, long, coa, ragcoa-algo1
+PIPELINE_METHOD="direct"  
 
 # Dataset name
 DATASET_NAME="narrativeqa"  # 可選擇的 dataset: hotpotqa, narrativeqa, triviaqa...
 
 # LLM/tokenizer model
-LLM_MODEL="gpt-4.1"
-TOKENIZER="gpt-4.1"
+LLM_MODEL="gpt-4o-mini"
+TOKENIZER="gpt-4o-mini"
 
 # 指定 Weave logging
 # 取出模型名稱部分，自動清理掉 prefix 與特殊字元
 MODEL_NAME_CLEAN="${LLM_MODEL##*/}"        # "Llama-3.3-70B-Instruct"
 MODEL_NAME_CLEAN="${MODEL_NAME_CLEAN//./-}" # "Llama-3-3-70B-Instruct"
-WEAVE_PROJECT_RAW="${DATASET_NAME}-${MODEL_NAME_CLEAN}"
+WEAVE_PROJECT_RAW="new-${DATASET_NAME}-${MODEL_NAME_CLEAN}"
 WEAVE_PROJECT="${WEAVE_PROJECT_RAW,,}" # lowercase
 
 SERVER_PORT=8002

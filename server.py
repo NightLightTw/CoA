@@ -30,22 +30,22 @@ class RAGPipeline:
     def __init__(
         self,
         tokenizer,
-        model_name="BAAI/bge-large-en",
+        embed_model_name="BAAI/bge-large-en",
         max_chunk_size=300,
-        max_total_words=5000,
         client=None,
-        gen_model_name="meta-llama/llama-3.3-70b-instruct:free",
-        task_requirement=None
+        gen_model_name=None,
+        task_requirement=None,
+        top_k=None
     ):
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.retriever = FlagModel(model_name, use_fp16=True)
+        self.retriever = FlagModel(embed_model_name, use_fp16=True)
         self.retriever.model = self.retriever.model.to(device) # Move model to GPU if available
         self.max_chunk_size = max_chunk_size
-        self.max_total_words = max_total_words
         self.client = client
         self.gen_model_name = gen_model_name
         self.tokenizer = tokenizer
         self.task_requirement = task_requirement
+        self.top_k = top_k
 
     def embed_chunks(self, chunks):
         return self.retriever.encode(chunks, batch_size=32, max_length=512)
@@ -55,16 +55,7 @@ class RAGPipeline:
         similarities = np.dot(embeddings, query_embedding)
         sorted_indices = np.argsort(similarities)[::-1]
 
-        relevant_chunks = []
-        total_words = 0
-        for idx in sorted_indices:
-            chunk = chunks[idx]
-            chunk_word_count = len(chunk.split())
-            if total_words + chunk_word_count <= self.max_total_words:
-                relevant_chunks.append(chunk)
-                total_words += chunk_word_count
-            else:
-                break
+        relevant_chunks = [chunks[idx] for idx in sorted_indices[:self.top_k]]
         return relevant_chunks
 
     def retrieve(self, context, question):
@@ -73,10 +64,7 @@ class RAGPipeline:
         embeddings = self.embed_chunks(chunks)
         relevant_chunks = self.retrieve_relevant_chunks(question, chunks, embeddings)
         input_chunk = " ".join(relevant_chunks)
-        
-        input_chunk = split_into_chunks_with_token(input_chunk, max_chunk_size=self.max_total_words, tokenizer=self.tokenizer, model=self.gen_model_name)
-        input_chunk = input_chunk[0] # Truncate to the first chunk
-        logger.info("Truncated input chunk to :%d tokens", len(input_chunk.split()))
+
         return input_chunk
 
     @weave.op()
@@ -91,7 +79,7 @@ class RAGPipeline:
         )
 
 class ChainOfAgentsPipeline:
-    def __init__(self, client, model, tokenizer, task_requirement, max_chunk_size=5000):
+    def __init__(self, client, model, tokenizer, task_requirement, max_chunk_size=6000):
         self.client = client
         self.model = model
         self.tokenizer = tokenizer
@@ -129,7 +117,7 @@ class ChainOfAgentsPipeline:
         )
 
 class VanillaPipeline:
-    def __init__(self, client, model, tokenizer, task_requirement, max_chunk_size=5000):
+    def __init__(self, client, model, tokenizer, task_requirement, max_chunk_size=6000):
         self.client = client
         self.model = model
         self.tokenizer = tokenizer
@@ -165,6 +153,107 @@ class DirectPipeline:
             query=question
         )
 
+class RAGCoAAlgo1Pipeline:
+    def __init__(
+        self,
+        tokenizer,
+        embed_model_name="BAAI/bge-large-en",
+        max_chunk_size=300,  # 300 tokens per chunk as specified
+        chunks_per_worker=20,  # 20 chunks per worker as specified
+        client=None,
+        gen_model_name="meta-llama/llama-3.3-70b-instruct:free",
+        task_requirement=None,
+        top_k=None
+    ):
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.retriever = FlagModel(embed_model_name, use_fp16=True)
+        self.retriever.model = self.retriever.model.to(device)  # Move model to GPU if available
+        self.max_chunk_size = max_chunk_size
+        self.chunks_per_worker = chunks_per_worker
+        self.client = client
+        self.gen_model_name = gen_model_name
+        self.tokenizer = tokenizer
+        self.task_requirement = task_requirement
+        self.top_k = top_k
+
+    def embed_chunks(self, chunks):
+        return self.retriever.encode(chunks, batch_size=32, max_length=512)
+
+    def rank_chunks(self, query, chunks, embeddings):
+        query_embedding = self.retriever.encode([query])[0]
+        similarities = np.dot(embeddings, query_embedding)
+        sorted_indices = np.argsort(similarities)[::-1]
+        
+        # Return all sorted chunks and their indices
+        return sorted_indices, similarities
+
+    @weave.op()
+    def run(self, question, context):
+        # Step 1: Split source into 300-token chunks
+        chunks = split_into_chunks_with_token(context, max_chunk_size=self.max_chunk_size, 
+                                             tokenizer=self.tokenizer, model=self.gen_model_name)
+        logger.info("Total chunks: %d", len(chunks))
+        
+        # Step 2: BGE retriever ranks all chunks
+        embeddings = self.embed_chunks(chunks)
+        sorted_indices, similarities = self.rank_chunks(question, chunks, embeddings)
+        
+        # Step 3: Select top-k chunks for processing
+        if self.top_k:
+            sorted_indices = sorted_indices[:self.top_k]
+            
+        # Step-by-step processing with workers
+        previous_cu = None
+        
+        # Determine how many worker groups we need based on chunks_per_worker
+        num_workers = len(sorted_indices) // self.chunks_per_worker
+        if len(sorted_indices) % self.chunks_per_worker > 0:
+            num_workers += 1
+            
+        logger.info("Using %d workers for %d chunks", num_workers, len(sorted_indices))
+        
+        # Process chunks in groups of chunks_per_worker
+        for worker_idx in range(num_workers):
+            start_idx = worker_idx * self.chunks_per_worker
+            end_idx = min((worker_idx + 1) * self.chunks_per_worker, len(sorted_indices))
+            
+            # Skip if no more chunks to process
+            if start_idx >= len(sorted_indices):
+                break
+                
+            worker_chunk_indices = sorted_indices[start_idx:end_idx]
+            
+            # Combine worker's assigned chunks
+            worker_text = ""
+            for idx in worker_chunk_indices:
+                worker_text += chunks[idx] + " "
+                
+            logger.info("Worker %d/%d processing chunks %d-%d", 
+                       worker_idx + 1, num_workers, start_idx + 1, end_idx)
+            logger.info("Worker text length: %d tokens", len(worker_text.split()))
+            
+            # Process with worker agent
+            response = worker_agent(
+                client=self.client,
+                model=self.gen_model_name,
+                input_chunk=worker_text,
+                previous_cu=previous_cu,
+                query=question
+            )
+            
+            previous_cu = response.choices[0].message.content.strip()
+            logger.info("Worker %d full response: %s", worker_idx + 1, response.model_dump_json(indent=2))
+        
+        # Step 4: Manager receives last Communication Unity and answers the question
+        logger.info("Manager integrating final answer...")
+        return manager_agent(
+            client=self.client,
+            model=self.gen_model_name,
+            task_requirement=self.task_requirement,
+            previous_cu=previous_cu,
+            query=question
+        )
+
 PIPELINE_METHOD = None
 
 @app.post("/query")
@@ -176,26 +265,25 @@ def query_pipeline(request: QueryRequest):
         # base_url="https://openrouter.ai/api/v1",
         # default_headers={ # for OpenRouter
         #     "HTTP-Referer": "http://localhost",
-        #     "X-Title": "Chain_of_agents_DEMO"
+        #     "X-Title": "Chain_of_agents"
         # }
     )
     model_name = args.llm
-    # tokenizer = tiktoken.encoding_for_model(model_name)
-    tokenizer = tiktoken.get_encoding("cl100k_base")
-    # tokenizer = AutoTokenizer.from_pretrained(model_name)
+    tokenizer = tiktoken.encoding_for_model(model_name)
+    # tokenizer = tiktoken.get_encoding("cl100k_base")
     # tokenizer = AutoTokenizer.from_pretrained(args.tokenizer_name)
 
     task_requirement = HotpotQA_specific_requirement
 
     if PIPELINE_METHOD == "rag":
         pipeline = RAGPipeline(
-            model_name="BAAI/bge-large-en",
+            embed_model_name="BAAI/bge-large-en",
             tokenizer=tokenizer,
             max_chunk_size=300,
-            max_total_words=6000,
             client=client,
             gen_model_name=model_name,
-            task_requirement=task_requirement
+            task_requirement=task_requirement,
+            top_k=20
         )
     elif PIPELINE_METHOD == "coa":
         pipeline = ChainOfAgentsPipeline(
@@ -226,6 +314,17 @@ def query_pipeline(request: QueryRequest):
             task_requirement=task_requirement,
             max_chunk_size=126000
         )
+    elif PIPELINE_METHOD == "ragcoa-algo1":
+        pipeline = RAGCoAAlgo1Pipeline(
+            embed_model_name="BAAI/bge-large-en",
+            tokenizer=tokenizer,
+            max_chunk_size=300,  # 300 tokens per chunk
+            chunks_per_worker=20,  # 20 chunks per worker (6000 tokens)
+            client=client,
+            gen_model_name=model_name,
+            task_requirement=task_requirement,
+            top_k=20
+        )
     else:
         return {"error": "Invalid method"}
 
@@ -237,7 +336,9 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument("-weave", "-w", type=str, help="Use weave for logging")
-    parser.add_argument("-method", "-m", type=str, choices=["rag", "coa", "vanilla", "direct","long"], required=True, help="Specify the pipeline method")
+    parser.add_argument("-method", "-m", type=str, 
+                       choices=["rag", "coa", "vanilla", "direct", "long", "ragcoa-algo1"], 
+                       required=True, help="Specify the pipeline method")
     parser.add_argument("-port", "-p", type=int, default=8000, help="Port number for the server")
     parser.add_argument("-llm", "-l", type=str, default="gpt-4o-mini", help="LLM model name")
     parser.add_argument("-tokenizer_name", "-t", type=str, default="meta-llama/llama-3.3-70b-instruct", help="Tokenizer model name")
