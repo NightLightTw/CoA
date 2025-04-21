@@ -17,7 +17,7 @@ if __name__ == "__main__":
     API_URL = args.api
     dataset_name = args.dataset
     dataset = load_dataset('THUDM/LongBench', dataset_name, split='test')
-    # dataset = dataset.select(range(3)) # Test few examples
+    dataset = dataset.select(range(1)) # Test few examples
     predictions = []
     ground_truths = []
 
@@ -60,8 +60,6 @@ if __name__ == "__main__":
     table = wandb.Table(columns=["index", "question", "ground_truth", "prediction", "f1_score"])
     for i, (ex, pred, truth, f1) in enumerate(zip(dataset, predictions, ground_truths, f1_scores)):
         table.add_data(i, ex["input"], truth, pred, f1)
-    wandb.log({
-        "average_f1": average_f1,
-        "eval_results": table,
-        })
+    wandb.log({"average_f1": average_f1})
+    wandb.log({args.name: table})
     wandb.finish()

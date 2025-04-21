@@ -5,6 +5,12 @@ HotpotQA_specific_requirement = """
 Answer the question based on the given passages. Only give me the answer and do not output any other words.
 """
 
+NarrativeQA_specific_requirement = """
+You are given a story, which can be either a novel or a movie script, and a question.
+Answer the question as concisely as you can, using a single phrase if possible. Do not provide any
+explanation.
+"""
+
 COA_WORKER_PROMPT = """
 {Input_Chunk_ci}
 Here is the summary of the previous source text: {Previous_Communication_Unit}\n

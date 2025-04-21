@@ -1,7 +1,8 @@
 #!/bin/bash
 
 # 指定 pipeline 方法: vanilla, rag, direct, long, coa, ragcoa-algo1
-PIPELINE_METHOD="direct"  
+PIPELINE_METHOD="ragcoa-algo1"  
+TOP_K=80 # for RAG
 
 # Dataset name
 DATASET_NAME="narrativeqa"  # 可選擇的 dataset: hotpotqa, narrativeqa, triviaqa...
@@ -14,7 +15,7 @@ TOKENIZER="gpt-4o-mini"
 # 取出模型名稱部分，自動清理掉 prefix 與特殊字元
 MODEL_NAME_CLEAN="${LLM_MODEL##*/}"        # "Llama-3.3-70B-Instruct"
 MODEL_NAME_CLEAN="${MODEL_NAME_CLEAN//./-}" # "Llama-3-3-70B-Instruct"
-WEAVE_PROJECT_RAW="new-${DATASET_NAME}-${MODEL_NAME_CLEAN}"
+WEAVE_PROJECT_RAW="rag-${DATASET_NAME}-${MODEL_NAME_CLEAN}"
 WEAVE_PROJECT="${WEAVE_PROJECT_RAW,,}" # lowercase
 
 SERVER_PORT=8002
@@ -24,11 +25,7 @@ API=http://localhost:$SERVER_PORT/query
 mkdir -p logs
 
 # 啟動 server.py
-if [ -z "$WEAVE_PROJECT" ]; then
-    python server.py -m $PIPELINE_METHOD -p $SERVER_PORT -l $LLM_MODEL -t $TOKENIZER > logs/server_$SERVER_PORT.log 2>&1 &
-else
-    python server.py -m $PIPELINE_METHOD -w $WEAVE_PROJECT -p $SERVER_PORT -l $LLM_MODEL -t $TOKENIZER > logs/server_$SERVER_PORT.log 2>&1 &
-fi
+python server.py -m $PIPELINE_METHOD -k $TOP_K -w $WEAVE_PROJECT -p $SERVER_PORT -l $LLM_MODEL -t $TOKENIZER > logs/server_$SERVER_PORT.log 2>&1 &
 
 # 等待 server 啟動
 echo "Waiting for server to start..."
