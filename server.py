@@ -105,7 +105,6 @@ class ChainOfAgentsPipeline:
             )
             
             previous_cu = response.choices[0].message.content.strip()
-            logger.info("Worker full response: %s", response.model_dump_json(indent=2))
 
         logger.info("Manager 最終整合...")
         return manager_agent(
@@ -403,7 +402,7 @@ def startup_event():
             model=model_name,
             tokenizer=tokenizer,
             task_requirement=task_requirement,
-            max_chunk_size=6000
+            max_chunk_size=args.chunk_size #6000
         )
     elif PIPELINE_METHOD == "vanilla":
         pipeline = VanillaPipeline(
@@ -469,6 +468,7 @@ if __name__ == "__main__":
     parser.add_argument("-llm", "-l", type=str, default="gpt-4o-mini", help="LLM model name")
     parser.add_argument("-tokenizer_name", "-t", type=str, default="meta-llama/llama-3.3-70b-instruct", help="Tokenizer model name")
     parser.add_argument("-top_k", "-k", type=int, default=20, help="Top k chunks to retrieve")
+    parser.add_argument("-chunk_size", "-cs", type=int, default=300, help="Chunk size for splitting the context")
     args = parser.parse_args()
 
     PIPELINE_METHOD = args.method

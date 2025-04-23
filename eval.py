@@ -17,7 +17,7 @@ if __name__ == "__main__":
     API_URL = args.api
     dataset_name = args.dataset
     dataset = load_dataset('THUDM/LongBench', dataset_name, split='test')
-    dataset = dataset.select(range(1)) # Test few examples
+    # dataset = dataset.select(range(1)) # Test few examples
     predictions = []
     ground_truths = []
 

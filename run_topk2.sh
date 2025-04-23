@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # 指定 pipeline 方法: vanilla, rag, direct, long, coa, ragcoa-algo1, ragcoa-algo2
-PIPELINE_METHOD="ragcoa-algo2"  
+PIPELINE_METHOD="rag"  
 
 # Dataset name
 DATASET_NAME="narrativeqa"  # 可選擇的 dataset: hotpotqa, narrativeqa, triviaqa...
