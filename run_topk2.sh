@@ -27,7 +27,7 @@ mkdir -p logs
 for TOP_K in "${TOP_K_VALUES[@]}"; do
     # --------- (1) setsid 啟動 server ------------
     setsid python server.py \
-        -m "$PIPELINE_METHOD" -k "$TOP_K" -w "$WEAVE_PROJECT" \
+        -d $DATASET_NAME -m "$PIPELINE_METHOD" -k "$TOP_K" -w "$WEAVE_PROJECT" \
         -p "$SERVER_PORT" -l "$LLM_MODEL" -t "$TOKENIZER" \
         > "logs/server_${SERVER_PORT}.log" 2>&1 &
     SERVER_PID=$!

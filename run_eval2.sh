@@ -25,7 +25,7 @@ API=http://localhost:$SERVER_PORT/query
 mkdir -p logs
 
 # 啟動 server.py
-python server.py -m $PIPELINE_METHOD -cs $CHUNKSIZE -w $WEAVE_PROJECT -p $SERVER_PORT -l $LLM_MODEL -t $TOKENIZER > logs/server_$SERVER_PORT.log 2>&1 &
+python server.py -d $DATASET_NAME -m $PIPELINE_METHOD -cs $CHUNKSIZE -w $WEAVE_PROJECT -p $SERVER_PORT -l $LLM_MODEL -t $TOKENIZER > logs/server_$SERVER_PORT.log 2>&1 &
 
 # 等待 server 啟動
 echo "Waiting for server to start..."

@@ -31,7 +31,7 @@ do
     echo "============================="
 
     # 啟動 server.py 並寫入 logs
-    python server2.py -m $PIPELINE_METHOD -w $WEAVE_PROJECT -p $SERVER_PORT -l $LLM_MODEL -t $TOKENIZER > logs/server_${SERVER_PORT}_${PIPELINE_METHOD}.log 2>&1 &
+    python server2.py -d $DATASET_NAME -m $PIPELINE_METHOD -w $WEAVE_PROJECT -p $SERVER_PORT -l $LLM_MODEL -t $TOKENIZER > logs/server_${SERVER_PORT}_${PIPELINE_METHOD}.log 2>&1 &
 
     # 等待 server 啟動
     echo "Waiting for server to start..."

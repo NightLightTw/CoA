@@ -12,8 +12,8 @@ from transformers import AutoTokenizer
 import tiktoken
 
 from src.utils import *
-from src.agent import RAG_agent, worker_agent, manager_agent, vanilla_agent, direct_agent
-from src.prompt import HotpotQA_specific_requirement
+from src.agent import *
+from src.prompt import *
 
 load_dotenv(override=True)
 
@@ -384,7 +384,11 @@ def startup_event():
     # tokenizer = tiktoken.get_encoding("cl100k_base")
     # tokenizer = AutoTokenizer.from_pretrained(args.tokenizer_name)
 
-    task_requirement = HotpotQA_specific_requirement
+    task_requirement = None
+    if args.dataset == "hotpotqa":
+        task_requirement = HotpotQA_specific_requirement
+    elif args.dataset == "narrativeqa":
+        task_requirement = NarrativeQA_specific_requirement
 
     if PIPELINE_METHOD == "rag":
         pipeline = RAGPipeline(
@@ -460,6 +464,7 @@ if __name__ == "__main__":
     import uvicorn
 
     parser = argparse.ArgumentParser()
+    parser.add_argument("-dataset", "-d", type=str, default="hotpotqa", help="Dataset name")
     parser.add_argument("-weave", "-w", type=str, help="Use weave for logging")
     parser.add_argument("-method", "-m", type=str, 
                        choices=["rag", "coa", "vanilla", "direct", "long", "ragcoa-algo1", "ragcoa-algo2"], 
